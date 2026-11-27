@@ -11,3 +11,48 @@ id: M-001
 - [x] T-05: Add `release.yml`; actionlint, zizmor, and `goreleaser check` pass locally (7d3e60b: actionlint 0, zizmor no findings, `goreleaser check` exit 0; 13/13 `uses:` SHA-pinned)
 - [ ] review
 - [ ] verify
+
+## Findings
+
+| ID | Severity | Confidence | Pre-existing | Lens | Location | Text | Result |
+|---|---|---|---|---|---|---|---|
+| F-01 | Medium | high | no | correctness | scripts/check-deps.sh:10 | edge-path: the D-08 check reads only the host GOOS/GOARCH and cgo graph, so a denied import in a `_windows.go` or `!cgo` file passes and ships (also spec/intent ac-not-met, security insecure-default) | fixed in 8078246 (seeded `_windows.go` net and `!cgo` os/exec: deps fails per target) |
+| F-02 | Medium | high | no | correctness | Makefile:30 | edge-path: go vet and golangci-lint check only host-OS files; a stray print or vet error in a `_windows.go` file passes every gate | fixed in 8078246 (seeded `_windows.go` print and printf: lint and vet fail on windows) |
+| F-03 | Medium | high | no | documentation quality | README.md:101 | doc-wrong: "the binary's package graph" is only the host graph | fixed in 17e202f |
+| F-04 | Medium | high | no | documentation quality | README.md:91 | doc-missing: no C compiler in the prerequisites, while `go test -race` needs cgo on Linux and Windows | fixed in 17e202f |
+| F-05 | Low | high | no | data/API contract | .goreleaser.yaml:17 | contract-undocumented: GoReleaser binaries print the version without `v`, `go install` builds with it | listed: each channel prints its build's version (AC-05 holds); the version output form belongs to the CLI rule that M-002 sets (architecture.md Boundaries); verifier lowered it from Medium |
+| F-06 | Medium | medium | no | data/API contract | .github/workflows/release.yml:10 | contract-undocumented: a `v*-rc.N` tag publishes a full release and moves the cask, while `go install @latest` stays on the last stable | fixed in b8580ff, 17e202f |
+| F-07 | Medium | high | no | data/API contract | .goreleaser.yaml:38 | contract-undocumented: the archives have no top folder, so an unpack overwrites a README.md or LICENSE in the current folder, and the README does not say so | fixed in 17e202f (D-12) |
+| F-08 | Medium | medium | no | spec/intent | .github/workflows/ci.yml:128 | plan-drift: the CI dry run does not check that each archive holds LICENSE, README, and the binary (`wanonymizer.exe` in the zips) | fixed in 72b60e6 (seeded archive without README.md: the step fails) |
+| F-09 | Medium | medium | no | security | .github/workflows/release.yml:47 | broken-access: the tap token is a repository secret outside an environment, so a branch workflow could read it | rejected: AC-06 is about the workflow text, which meets it (spec.md:41 "its release job alone holds ... the tap token, ... when actionlint and zizmor read the workflows"); where the secret lives, and environment and tag rules, are repository settings (spec.md:31 "Repository settings ... the user's to turn on"); an `environment:` key alone would not restrict a repository secret (verifier, method 3) |
+| F-10 | Medium | high | no | security | README.md:86 | insecure-default: the README offers `xattr -dr` on "the folder that holds" the binary, which strips quarantine from every earlier download in that folder | fixed in 17e202f |
+| F-11 | Medium | high | no | data/API contract | scripts/install-tools.sh:66 | format-unversioned: the `.<tool>.version` stamp records no OS, CPU, or digest, so `make tools` keeps a wrong-platform binary next to a matching stamp (also simplicity :64, unneeded-code) | fixed in 66bde93 |
+| F-12 | Medium | medium | no | data/API contract | scripts/install-tools.sh:9 | contract-undocumented: GoReleaser is pinned here and in release.yml:43 with no check that they match, so the dry run can prove another version than the release runs (also simplicity release.yml:43, duplicate-logic) | fixed in 66bde93, 72b60e6 (seeded v2.20.2 in a release.yml copy: the step fails) |
+| F-13 | Low | high | no | correctness | .github/workflows/ci.yml:72 | edge-path: govulncheck analyses only the Linux runner's target, the F-01 bug class (reported by security) | fixed in 72b60e6 |
+| F-14 | Low | medium | no | simplicity | .goreleaser.yaml:30 | unneeded-code: `ids:`, `binary`, `algorithm`, and `package_name` restate defaults of a one-build config | fixed in b8580ff (snapshot names and archive contents unchanged) |
+| F-15 | Low | medium | no | simplicity | scripts/install-tools.sh:20 | speculative-option: a bin-dir argument that only `make tools` passes, resolved against the caller's folder (also data/API contract-undocumented) | fixed in 66bde93 |
+| F-16 | Low | low | no | simplicity | .github/workflows/ci.yml:44 | unneeded-code: `CGO_ENABLED: "1"` changes nothing on runners with a C compiler | fixed in 72b60e6 |
+| F-17 | Low | low | no | simplicity | cmd/wanonymizer/main.go:23 | premature-abstraction: a one-use `run(w)` wrapper around one Fprintf | fixed in da3e33a |
+| F-18 | Low | high | no | correctness | Makefile:17 | edge-path: `gofmt -l .` walks dot folders that `./...` skips, so a scratch `.go` file in `.specstral/.local/tmp/` fails `make check` | fixed in 8078246 |
+| F-19 | Low | high | no | correctness | Makefile:4 | edge-path: `$(wildcard $(CURDIR)/bin/...)` finds nothing in a path with a space and falls back to the PATH tool | fixed in 8078246 |
+| F-20 | Low | medium | no | documentation quality | README.md:52 | doc-wrong: "Go 1.27 or later", while go.mod:3 needs 1.27.4 (also data/API at go.mod:3) | fixed in 17e202f |
+| F-21 | Low | high | no | documentation quality | README.md:65 | doc-missing: no checksum command for the Windows zips | fixed in 17e202f |
+| F-22 | Low | high | no | documentation quality | README.md:89 | doc-missing: the Development section omits `make snapshot` | fixed in 17e202f |
+| F-23 | Low | medium | no | documentation quality | README.md:100 | doc-wrong: names `go build ./...`, while `make check` runs `go build -o /dev/null ./...` | fixed in 17e202f |
+| F-24 | Low | medium | no | security | README.md:73 | insecure-default: `gh attestation verify --repo` alone does not pin the signer workflow that README.md:69 claims (also documentation quality :69) | fixed in 17e202f |
+| F-25 | Low | high | no | data/API contract | .goreleaser.yaml:70 | contract-undocumented: the cask description is 90 characters, over Homebrew's 80 | fixed in b8580ff |
+| F-26 | Low | medium | no | data/API contract | .goreleaser.yaml:46 | contract-undocumented: the .deb has no Section, a synopsis over 80 characters ending in a full stop, and no copyright file | fixed in b8580ff |
+| F-27 | Low | medium | no | security | .github/workflows/release.yml:44 | insecure-default: the release job runs no check before it publishes a tag | listed: no AC asks for it; suggested extra |
+| F-28 | Low | medium | no | security | .github/workflows/release.yml:43 | insecure-default: goreleaser-action checks the GoReleaser download only against checksums from the same release, with no cosign | listed: hardening that no AC asks for; suggested extra |
+| F-29 | Low | low | no | security | scripts/check-deps.sh:8 | insecure-default: `syscall` and `os.StartProcess` reach the network and processes without a denied package | listed: the list is D-08's; a wider list needs a decision |
+| F-30 | Low | medium | no | spec/intent | .github/dependabot.yml:10 | scope-creep: a 7-day cooldown that D-09 does not name (also simplicity) | rejected: zizmor 1.33.1 fails without it (`dependabot-cooldown`, exit 13), and AC-06 and AC-07 need zizmor to pass; D-11 |
+| F-31 | Low | low | no | documentation quality | LICENSE:5 | doc-wrong: line wrapping differs from SPDX | rejected: the T-02 run and the spec/intent reviewer diffed LICENSE against the fetched SPDX `text/MIT.txt`: only line 3 differs; this reviewer compared a text from memory (+5 more Low: 2 listed, 3 rejected with the plan or AC text) |
+
+## Decisions
+
+| ID | Decision | Why | Rejected alternative |
+|---|---|---|---|
+| D-11 | Dependabot waits 7 days (`cooldown.default-days: 7`) before it proposes a new action or module release | zizmor 1.33.1's `dependabot-cooldown` audit fails without it, and AC-06 and AC-07 need zizmor to pass; a fresh compromised release gets a week to be caught | Suppress the audit: updates on release day, and a compromised release lands sooner |
+| D-12 | The archives stay flat (no top folder); the README says to unpack them into an empty folder (F-07) | GoReleaser's default; the cask's binary path and its quarantine hook depend on it | `wrap_in_directory`: no overwrite on unpack, but it changes the cask paths and the first archive contract |
+| D-13 | The dependency check, go vet, golangci-lint, and govulncheck run once per D-03 release target, with `CGO_ENABLED=0` as the release builds (F-01, F-02, F-13) | The host graph misses files built only for some targets | Run the checks in the macOS and Windows CI jobs: misses arm64 and `!cgo` files, and a local `make check` stays host-only |
+| D-14 | A tag with a prerelease suffix is published as a GitHub prerelease and does not update the cask: `release.prerelease: auto`, cask `skip_upload: auto` (F-06) | Stable channels stay on stable versions, as `go install @latest` does | A rule to push only `vX.Y.Z` tags: nothing checks it |
