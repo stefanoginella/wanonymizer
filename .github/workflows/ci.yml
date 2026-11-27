@@ -67,11 +67,12 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.mod
       # It queries vuln.go.dev; bump the version by hand. It is installed
-      # for the runner first, then run once per release target (D-13): a
-      # go run under a target's GOOS would build it for that target.
+      # for the runner first, then run once per release target and once
+      # with the host's cgo setting (D-13): a go run under a target's
+      # GOOS would build it for that target.
       - name: Install govulncheck
         run: GOBIN="$PWD/bin" go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
-      - name: govulncheck ./... (each release target)
+      - name: govulncheck ./... (each release target and the host)
         run: sh scripts/each-target.sh bin/govulncheck ./...
 
   workflows:

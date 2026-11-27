@@ -11,7 +11,8 @@ GOLANGCI_LINT := $(call tool,golangci-lint)
 .PHONY: check fmt vet lint tidy test build deps tools snapshot
 
 # check runs every step, fast to slow, and stops at the first failure.
-# vet, lint, and deps run once per release target (scripts/each-target.sh).
+# vet, lint, and deps run once per release target, then once with the
+# host's default environment, cgo included (scripts/each-target.sh).
 check: fmt vet lint tidy test build deps
 
 # fmt checks the .go files of every build tag in the folders that ./...
@@ -30,11 +31,11 @@ fmt:
 	fi
 
 vet:
-	@echo '==> go vet ./... (each release target)'
+	@echo '==> go vet ./... (each release target and the host)'
 	@sh scripts/each-target.sh go vet ./...
 
 lint:
-	@echo '==> golangci-lint run (each release target)'
+	@echo '==> golangci-lint run (each release target and the host)'
 	@sh scripts/each-target.sh $(GOLANGCI_LINT) run
 
 tidy:
@@ -50,7 +51,7 @@ build:
 	@go build -o /dev/null ./...
 
 deps:
-	@echo '==> dependency check (each release target)'
+	@echo '==> dependency check (each release target and the host)'
 	@sh scripts/each-target.sh sh scripts/check-deps.sh
 
 tools:

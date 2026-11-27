@@ -2,8 +2,9 @@
 # Fails when the shipped binary's package graph holds a denied package
 # (M-001 D-08: no network, read-only). It reads the graph of the GOOS,
 # GOARCH, and CGO_ENABLED of its environment: make check runs it once
-# per release target through scripts/each-target.sh. Test code is
-# outside the graph: go list runs without -test.
+# per release target and once on the host through
+# scripts/each-target.sh. Test code is outside the graph: go list runs
+# without -test.
 set -eu
 
 main_pkg=./cmd/wanonymizer

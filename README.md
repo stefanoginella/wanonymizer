@@ -139,8 +139,9 @@ detector needs cgo there. macOS needs none.
   `os/exec`, or `database/sql`. `go vet`, `golangci-lint`, and the
   dependency check run once per release target (macOS, Linux, and
   Windows, each on amd64 and arm64), with `CGO_ENABLED=0` as the
-  release builds, so code built only for another system is checked
-  too.
+  release builds, then once more on your system with cgo as `go env`
+  sets it, as `go install` builds: code built only for another system
+  or only with cgo is checked too.
 - `make snapshot` builds the release into `./dist/` (archives,
   packages, checksums, and the cask) and publishes nothing.
 
