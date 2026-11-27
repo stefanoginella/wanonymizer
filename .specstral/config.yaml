@@ -1,0 +1,40 @@
+# Specstral settings. setup writes this file, and it is the record of the setup choices.
+# Rerun /specstral:setup to change a value, or name only the change:
+# /specstral:setup set default_rigor to strict
+
+# The branch that releases merge into.
+default_branch: main
+
+# Rigor of new milestones and quicks: lean or strict.
+default_rigor: lean
+
+# semver: tagged releases from 0.1.0. none: deploy-only, dated changelog headings, no tags.
+version_scheme: semver
+
+# The files that hold the project version, in an existing project. release updates them.
+# version_files:
+#   - package.json
+
+# The docs that stay after the brownfield doc fates. A setup rerun asks only about the others.
+# kept_docs:
+#   - README.md
+
+# Model and effort per agent role: "<model family alias> <effort>".
+# Efforts: low, medium, high, xhigh, max. The session uses your own model.
+#   lean:        the agents of a lean unit: the reviewers (also the
+#                agent instructions reviewer of a diff of prompts),
+#                and an implementer when the work does not fit the
+#                session.
+#   strict:      the agents of a strict unit: test writer, implementers,
+#                checker, reviewers, and the verifier of a Medium finding.
+#   strict_deep: in a strict unit: the security lens, and the panel
+#                verifiers of High and Critical findings; in a lean
+#                unit: the verifier of a High or Critical finding
+#                without confidence high.
+#   mechanical:  the research agents of the interviews, and the
+#                explorer agents of setup in a big repo.
+agents:
+  lean: opus medium
+  strict: opus high
+  strict_deep: opus xhigh
+  mechanical: sonnet high
