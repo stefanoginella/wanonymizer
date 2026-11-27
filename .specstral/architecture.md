@@ -37,8 +37,8 @@
 ## Environments
 
 - Local: the user runs the binary on a laptop or on a server over SSH.
-- CI: GitHub Actions on each push and pull request: `make check` on Linux, the tests on macOS and Windows, govulncheck, the workflow linters, and a release dry run ([M-001](initiatives/I-001-dump-anonymizer/milestones/M-001-guardrails/spec.md) D-07).
-- Release: a workflow on a pushed `v*` tag runs GoReleaser: binaries for macOS, Linux, and Windows on amd64 and arm64, `checksums.txt` with a GitHub build provenance attestation for each file it lists, .deb and .rpm files, and a Homebrew cask in `stefanoginella/homebrew-tap` (M-001 D-03, D-05, D-06). `go install github.com/stefanoginella/wanonymizer/cmd/wanonymizer@latest` also works.
+- CI: GitHub Actions on each push and pull request: `make check` on Linux, the tests on macOS and Windows, govulncheck, the workflow linters, and a release dry run ([M-001](initiatives/I-001-dump-anonymizer/milestones/M-001-guardrails/spec.md) D-07). Vet, lint, the dependency check, and govulncheck run per release target and on the host ([M-001 report](initiatives/I-001-dump-anonymizer/milestones/M-001-guardrails/report.md) D-13).
+- Release: a workflow on a pushed `v*` tag runs GoReleaser: binaries for macOS, Linux, and Windows on amd64 and arm64, `checksums.txt` with a GitHub build provenance attestation for each file it lists, .deb and .rpm files, and a Homebrew cask in `stefanoginella/homebrew-tap` (M-001 D-03, D-05, D-06). A tag with a prerelease suffix gives a GitHub prerelease and leaves the cask alone (M-001 report D-14). `go install github.com/stefanoginella/wanonymizer/cmd/wanonymizer@latest` also works.
 
 ## External services
 

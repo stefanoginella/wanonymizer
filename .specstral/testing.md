@@ -15,7 +15,9 @@
 
 ## Commands
 
-- `make check`: format, vet, lint, tests with the race detector, and build.
+- `make tools`: installs the pinned golangci-lint, GoReleaser, actionlint, and zizmor into `bin/` (versions in `scripts/install-tools.sh`).
+- `make check`: gofmt, go vet, golangci-lint, `go mod tidy -diff`, tests with the race detector, the build, and the dependency check of M-001 D-08. Vet, lint, and the dependency check run once per release target (`scripts/each-target.sh`) and once on the host (M-001 D-13).
+- `make snapshot`: the release build into `dist/`, publishing nothing.
 - `go test ./...`: all tests.
 - `go test -run <name> ./internal/<package>/`: one test.
 
