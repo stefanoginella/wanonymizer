@@ -1,5 +1,9 @@
 # wanonymizer
 
+> **Work in progress: not ready for use.** There is no release yet,
+> and the current binary only prints its version. Do not use it on
+> real data.
+
 wanonymizer is meant to be a command-line filter for WordPress SQL
 dumps: it will read a dump from a file or stdin and write a dump in
 which the personal data and keys that its rules know about (users,
