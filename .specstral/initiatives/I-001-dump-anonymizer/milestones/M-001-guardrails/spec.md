@@ -4,7 +4,7 @@ title: guardrails
 type: guard
 rigor: strict
 uat: no
-status: building
+status: done
 spec_hash: 73c6cf65d3fbca59677f05d4e601b45a9277ade724fb4022c090cdc90f4b2b30
 ---
 

@@ -11,6 +11,10 @@
 - A WP-CLI command or a WordPress plugin that wraps the tool on a live site.
 - winget and Scoop packages for Windows.
 
+## Backlog
+
+- B-001: Rule: the Definition of Done in `constitution.md` names the `make check` steps as the Makefile runs them: gofmt on the files that `./...` walks, vet, lint, and the dependency check per release target and on the host, and `go build -o /dev/null ./...` (added 2026-11-27)
+
 ## Deferred
 
 - Decide again on a real import into WordPress with WooCommerce in CI (due M-005)

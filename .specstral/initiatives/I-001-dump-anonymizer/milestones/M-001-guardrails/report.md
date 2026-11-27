@@ -1,6 +1,14 @@
 ---
 id: M-001
+changelog:
+  - "Added: release archives for macOS, Linux, and Windows on amd64 and arm64, .deb and .rpm packages, and a Homebrew cask, with `checksums.txt` and a build provenance attestation for each file."
 ---
+
+## Summary
+
+M-001 (guard, strict) set up the project's checks and release path. Built: the Go 1.27.4 module with a placeholder `wanonymizer` that prints its version; `make tools` (pinned golangci-lint, GoReleaser, actionlint, zizmor in `bin/`), `make check` (gofmt, vet, lint, tidy diff, race tests, build, the D-08 dependency check; vet, lint, and deps per release target and on the host), and `make snapshot`; CI (`ci.yml`: the D-07 jobs, SHA-pinned actions, a release dry run that installs the .deb and .rpm and checks archives, checksums, the GoReleaser pin, and the target list); `release.yml` on `v*` tags only; `.goreleaser.yaml` (6 targets, archives, deb and rpm, the cask with the quarantine hook, prereleases kept off the cask); Dependabot; LICENSE (MIT); the README with a work-in-progress notice (the user's request). All 8 ACs pass, CI is green on draft PR #1.
+
+Review: 38 findings (33 rows, 5 folded Low), 2 fix rounds. Open blockers for the user (at release, `uat: no`): F-32, a file that is both cgo-only and built only for another system escapes the checks (only `go install` on that system is exposed); F-06, the prerelease path is unproven without a live prerelease tag. Decisions D-11 to D-14 are build-time choices. Suggested extras: F-27 (a check before the release publishes), F-28 (cosign check of the GoReleaser download), and moving `HOMEBREW_TAP_TOKEN` into a `release` environment with a `v*` tag rule and a tag ruleset (the residual risk behind the rejected F-09). B-001 proposes the constitution's `make check` wording.
 
 ## Checklist
 
@@ -10,7 +18,7 @@ id: M-001
 - [x] T-04: Add `ci.yml` with the jobs of D-07, the zizmor config, and `.github/dependabot.yml`, with every action pinned by SHA; actionlint and zizmor pass locally (0613479: actionlint 0 errors, zizmor no findings, seeded `@v7` fails zizmor; 9/9 `uses:` SHA-pinned)
 - [x] T-05: Add `release.yml`; actionlint, zizmor, and `goreleaser check` pass locally (7d3e60b: actionlint 0, zizmor no findings, `goreleaser check` exit 0; 13/13 `uses:` SHA-pinned)
 - [x] review (2ae59f0..e6697c2: spec/intent, correctness, security, simplicity, data/API contract, documentation quality, plus 2 re-reads of unread files; 2 fix rounds, each re-reviewed by a guard and a security reviewer; skipped: test quality: guard unit, no tests; performance: no per-item or I/O loop; UI/a11y: no UI; agent instructions: no prompt, skill, AGENTS.md, or CLAUDE.md change)
-- [ ] verify
+- [x] verify (checker, 2 runs: `make check` exit 0; AC-01 to AC-08 pass: the AC-02 seeds each fail at their step, CI green for push and pull_request at 9186057 and 78db733, the .deb and .rpm run in Debian and Fedora, `go install` at 9186057 prints its pseudo-version, `gh release list` empty, LICENSE differs from SPDX MIT only in the copyright line; DoD README item failed at 9186057 and passed after e13acf5; `specstral check` 0 errors; prerelease tag run skipped: a live release (F-06))
 
 ## Blockers
 
@@ -63,3 +71,11 @@ id: M-001
 | D-12 | The archives stay flat (no top folder); the README says to unpack them into an empty folder (F-07) | GoReleaser's default; the cask's binary path and its quarantine hook depend on it | `wrap_in_directory`: no overwrite on unpack, but it changes the cask paths and the first archive contract |
 | D-13 | The dependency check, go vet, golangci-lint, and govulncheck run once per D-03 release target, with `CGO_ENABLED=0` as the release builds, plus once with the host's default cgo setting, as `go install` builds (F-01, F-02, F-13, F-32); a CI step keeps the target list equal to the snapshot's built targets (F-33) | The host graph misses files built only for some targets, and the cgo-off passes miss cgo-only files | Run the checks in the macOS and Windows CI jobs: misses arm64 and `!cgo` files, and a local `make check` stays host-only |
 | D-14 | A tag with a prerelease suffix is published as a GitHub prerelease and does not update the cask: `release.prerelease: auto`, cask `skip_upload: auto` (F-06) | Stable channels stay on stable versions, as `go install @latest` does | A rule to push only `vX.Y.Z` tags: nothing checks it |
+
+## Learnings
+
+- `go list -deps`, `go vet`, `golangci-lint`, and govulncheck read only the host GOOS/GOARCH and cgo setting; a check of other targets needs one pass per target, and cgo-on passes cover only the host.
+- zizmor 1.33.1 fails on a Dependabot config without a cooldown (`dependabot-cooldown`).
+- Current Fedora's `rpm -i` refuses an unsigned package ("no signature"); `dnf install ./<file>.rpm` installs it.
+- In an empty GitHub repository the first pushed branch becomes the default: push `main` before the unit branch.
+- A shell `export HOME=<temp>` in a Bash call carries over to later commands of the same call (git then loses its identity and credentials); keep the temporary home in a subshell.
