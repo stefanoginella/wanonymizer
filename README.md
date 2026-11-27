@@ -39,10 +39,11 @@ These are the channels of the first release, which is not out yet.
 
 - Debian and Ubuntu: download the `.deb` for your CPU (amd64 or arm64)
   from the [releases page](https://github.com/stefanoginella/wanonymizer/releases),
-  then run `sudo apt install ./<file>.deb`.
+  then run `sudo apt install ./wanonymizer_<version>_linux_<cpu>.deb`.
 
 - Fedora, RHEL, and other RPM systems: download the `.rpm` for your CPU
-  (amd64 or arm64), then run `sudo dnf install ./<file>.rpm`.
+  (amd64 or arm64), then run
+  `sudo dnf install ./wanonymizer_<version>_linux_<cpu>.rpm`.
 
 - Archives: a `.tar.gz` for macOS and Linux and a `.zip` for Windows,
   each for amd64 and arm64, on the releases page. Unpack it and put

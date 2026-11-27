@@ -7,7 +7,7 @@ GOLANGCI_LINT := $(call tool,golangci-lint)
 # The steps of check run in order, also under make -j.
 .NOTPARALLEL:
 
-.PHONY: check fmt vet lint tidy test build deps tools
+.PHONY: check fmt vet lint tidy test build deps tools snapshot
 
 # check runs every step, fast to slow, and stops at the first failure.
 check: fmt vet lint tidy test build deps
@@ -47,3 +47,7 @@ deps:
 
 tools:
 	@sh scripts/install-tools.sh bin
+
+# snapshot builds the release locally into dist/ and publishes nothing.
+snapshot:
+	@$(call tool,goreleaser) release --snapshot --clean
