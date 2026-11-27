@@ -37,12 +37,13 @@
 ## Environments
 
 - Local: the user runs the binary on a laptop or on a server over SSH.
-- CI: GitHub Actions runs `make check` on each push and pull request.
-- Release: GoReleaser builds binaries for macOS, Linux, and Windows with checksums, .deb and .rpm files, and the Homebrew tap formula. `go install` also works.
+- CI: GitHub Actions on each push and pull request: `make check` on Linux, the tests on macOS and Windows, govulncheck, the workflow linters, and a release dry run ([M-001](initiatives/I-001-dump-anonymizer/milestones/M-001-guardrails/spec.md) D-07).
+- Release: a workflow on a pushed `v*` tag runs GoReleaser: binaries for macOS, Linux, and Windows on amd64 and arm64, `checksums.txt` with a GitHub build provenance attestation for each file it lists, .deb and .rpm files, and a Homebrew cask in `stefanoginella/homebrew-tap` (M-001 D-03, D-05, D-06). `go install github.com/stefanoginella/wanonymizer/cmd/wanonymizer@latest` also works.
 
 ## External services
 
-- GitHub (the repository, Actions, Releases, and the Homebrew tap repository): credentials are GitHub Actions secrets. It has no test mode: a release or a tap update is a live write that waits for the user's yes.
+- GitHub (the repository, Actions, Releases, Dependabot, artifact attestations, and the Homebrew tap repository): credentials are GitHub Actions secrets. It has no test mode: a release or a tap update is a live write that waits for the user's yes. Attestations of a public repository are signed through the public Sigstore instance, and their log is public.
+- CI only: govulncheck queries vuln.go.dev.
 - None at run time: the tool works offline.
 
 ## Background work

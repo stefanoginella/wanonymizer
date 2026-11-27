@@ -36,4 +36,4 @@
 | An original value appears in a log, a report, or an error | 2 | 3 | 6 | Golden-dump tests scan stderr and the report for canary values |
 | Memory grows without limit on a multi-GB dump with one INSERT per table | 2 | 2 | 4 | A test with a generated large statement under a memory limit |
 | WooCommerce tax or shipping rules stop matching after the rewrite | 2 | 2 | 4 | Golden dumps that keep the fields the rules match on; the user's manual import test |
-| A tampered release binary reaches users | 1 | 3 | 3 | Checksums on each release; CI and release files are sensitive paths |
+| A tampered release binary reaches users | 1 | 3 | 3 | Checksums and build provenance attestations on each release; actions pinned by commit SHA; actionlint and zizmor on the workflows; CI and release files are sensitive paths (M-001 D-06, D-07, D-09) |

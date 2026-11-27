@@ -17,5 +17,5 @@
 
 ## Manual actions
 
-- M-001: Create the GitHub repository and add it as the `origin` remote.
-- M-001: Create the Homebrew tap repository, and add its token as a GitHub Actions secret.
+- M-001: Create the GitHub repository `stefanoginella/wanonymizer` and add it as the `origin` remote, before `/specstral:build M-001` (M-001 D-04).
+- M-001: Create the Homebrew tap repository `stefanoginella/homebrew-tap`, and add a fine-grained token with contents read-write on it only as the `HOMEBREW_TAP_TOKEN` GitHub Actions secret.
