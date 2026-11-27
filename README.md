@@ -141,7 +141,9 @@ detector needs cgo there. macOS needs none.
   Windows, each on amd64 and arm64), with `CGO_ENABLED=0` as the
   release builds, then once more on your system with cgo as `go env`
   sets it, as `go install` builds: code built only for another system
-  or only with cgo is checked too.
+  is checked, and so is code built only with cgo for your system. A
+  file built both only with cgo and only for another system is not
+  checked yet.
 - `make snapshot` builds the release into `./dist/` (archives,
   packages, checksums, and the cask) and publishes nothing.
 
