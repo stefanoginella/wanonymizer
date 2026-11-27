@@ -1,6 +1,6 @@
-# GoReleaser config: the release path of M-001 (D-02, D-03, D-05, D-06).
-# Check it with `goreleaser check`; build it locally, without publishing,
-# with `make snapshot`.
+# GoReleaser config: the release path of M-001 (D-02, D-03, D-05, D-06,
+# D-14). Check it with `goreleaser check`; build it locally, without
+# publishing, with `make snapshot`.
 version: 2
 
 project_name: wanonymizer
@@ -8,13 +8,14 @@ project_name: wanonymizer
 builds:
   - id: wanonymizer
     main: ./cmd/wanonymizer
-    binary: wanonymizer
     env:
       - CGO_ENABLED=0
     flags:
       - -trimpath
     ldflags:
       - -X main.version={{.Version}}
+    # The release targets (D-03): scripts/each-target.sh holds the same
+    # list for the checks of make check and CI.
     goos:
       - darwin
       - linux
@@ -27,8 +28,6 @@ builds:
 
 archives:
   - id: wanonymizer
-    ids:
-      - wanonymizer
     formats:
       - tar.gz
     format_overrides:
@@ -41,34 +40,38 @@ archives:
 
 checksum:
   name_template: checksums.txt
-  algorithm: sha256
+
+# D-14: a tag with a prerelease suffix (v1.2.0-rc.1) makes a GitHub
+# prerelease, and the cask below skips it.
+release:
+  prerelease: auto
 
 nfpms:
   - id: wanonymizer
-    ids:
-      - wanonymizer
-    package_name: wanonymizer
     formats:
       - deb
       - rpm
+    section: utils
     license: MIT
     # D-02: the name only, with no email.
     maintainer: Stefano Ginella
     homepage: https://github.com/stefanoginella/wanonymizer
-    description: >-
-      Command-line filter that replaces or removes personal data and keys
-      in WordPress SQL dumps.
+    # One description for the packages and the cask: at most 80
+    # characters, with no full stop (Homebrew's desc rules).
+    description: &description >-
+      Filter that replaces or removes personal data and keys in WordPress
+      SQL dumps
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/wanonymizer/copyright
 
 homebrew_casks:
   - name: wanonymizer
-    ids:
-      - wanonymizer
     binaries:
       - wanonymizer
     homepage: https://github.com/stefanoginella/wanonymizer
-    description: >-
-      Command-line filter that replaces or removes personal data and keys
-      in WordPress SQL dumps
+    description: *description
+    skip_upload: auto
     repository:
       owner: stefanoginella
       name: homebrew-tap
