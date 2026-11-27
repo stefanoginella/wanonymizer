@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"runtime/debug"
 )
@@ -13,16 +12,12 @@ import (
 // version is set at release time with -ldflags "-X main.version=...".
 var version string
 
+// main writes the version line to stdout, whatever the arguments, and
+// exits 1 when the write fails.
 func main() {
-	if err := run(os.Stdout); err != nil {
+	if _, err := fmt.Fprintf(os.Stdout, "wanonymizer %s\n", buildVersion()); err != nil {
 		os.Exit(1)
 	}
-}
-
-// run writes the version line to w, whatever the arguments.
-func run(w io.Writer) error {
-	_, err := fmt.Fprintf(w, "wanonymizer %s\n", buildVersion())
-	return err
 }
 
 // buildVersion returns the release version, else the module version
