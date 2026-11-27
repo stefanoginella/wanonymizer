@@ -1,0 +1,6 @@
+# zizmor config (M-001 D-09): every action is pinned by full commit SHA.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "*": hash-pin
