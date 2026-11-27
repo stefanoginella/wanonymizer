@@ -137,6 +137,31 @@ jobs:
           fi
       - name: goreleaser release --snapshot --clean
         run: bin/goreleaser release --snapshot --clean
+      # scripts/each-target.sh runs the checks once per release target
+      # (D-13): its list must equal the targets the snapshot built.
+      - name: Check that the checks cover each release target
+        run: |
+          built=$(jq -r '.[] | select(.type == "Binary")
+            | "\(.goos)/\(.goarch)"' dist/artifacts.json | LC_ALL=C sort -u)
+          checked=$(sh scripts/each-target.sh --list | LC_ALL=C sort -u)
+          if [ -z "$built" ] || [ -z "$checked" ]; then
+            echo "::error::no target in dist/artifacts.json or scripts/each-target.sh"
+            exit 1
+          fi
+          missing=$(LC_ALL=C comm -23 <(printf '%s\n' "$built") \
+            <(printf '%s\n' "$checked"))
+          extra=$(LC_ALL=C comm -13 <(printf '%s\n' "$built") \
+            <(printf '%s\n' "$checked"))
+          for target in $missing; do
+            echo "::error::the release builds $target, scripts/each-target.sh does not check it"
+          done
+          for target in $extra; do
+            echo "::error::scripts/each-target.sh checks $target, the release does not build it"
+          done
+          if [ -n "$missing$extra" ]; then
+            exit 1
+          fi
+          echo "the release builds and the checks cover: $(echo "$built" | paste -sd ' ' -)"
       - name: Check the checksums
         working-directory: dist
         run: sha256sum --check checksums.txt

@@ -5,11 +5,19 @@
 # go install builds: files built only with cgo are checked too. It
 # stops at the first run that fails, and names it.
 # Usage: scripts/each-target.sh <command> [<arg>...]
+#        scripts/each-target.sh --list    prints the targets, one a line
 set -eu
 
-# The release targets: keep this list equal to goos x goarch of the
-# build in .goreleaser.yaml.
+# The release targets: goos x goarch of the build in .goreleaser.yaml.
+# The release dry run in CI fails when the two lists differ (--list).
 targets="darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64"
+
+if [ "$#" -eq 1 ] && [ "$1" = --list ]; then
+	for target in $targets; do
+		echo "$target"
+	done
+	exit 0
+fi
 
 for target in $targets; do
 	echo "--> $target"

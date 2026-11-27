@@ -15,7 +15,8 @@ builds:
     ldflags:
       - -X main.version={{.Version}}
     # The release targets (D-03): scripts/each-target.sh holds the same
-    # list for the checks of make check and CI.
+    # list for the checks of make check and CI, and the release dry run
+    # in CI fails when the two differ.
     goos:
       - darwin
       - linux
