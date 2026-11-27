@@ -38,8 +38,8 @@ test:
 	@go test -race ./...
 
 build:
-	@echo '==> go build ./...'
-	@go build ./...
+	@echo '==> go build -o /dev/null ./...'
+	@go build -o /dev/null ./...
 
 deps:
 	@echo '==> dependency check'
