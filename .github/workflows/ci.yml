@@ -1,0 +1,247 @@
+# CI (M-001 D-07): the checks of each push and pull request. It holds no
+# secret and reads the repository only.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new run cancels the older run of the same event and ref; the push run
+# and the pull request run of one commit do not cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: make check (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.mod
+      - name: Install the pinned dev tools
+        run: make tools
+      - name: make check
+        run: make check
+
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.mod
+      # Called directly: windows-latest has no make on its PATH. The race
+      # detector needs cgo on Windows (not on macOS): the image ships gcc,
+      # so go turns cgo on by default.
+      - name: go test -race ./...
+        run: go test -race ./...
+      - name: go build ./...
+        run: go build ./...
+
+  vuln:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.mod
+      # It queries vuln.go.dev; bump the version by hand. It is installed
+      # for the runner first, then run once per release target and once
+      # with the host's cgo setting (D-13): a go run under a target's
+      # GOOS would build it for that target.
+      - name: Install govulncheck
+        run: GOBIN="$PWD/bin" go install golang.org/x/vuln/cmd/govulncheck@v1.10.0
+      - name: govulncheck ./... (each release target and the host)
+        run: sh scripts/each-target.sh bin/govulncheck ./...
+
+  workflows:
+    name: actionlint and zizmor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned dev tools
+        run: make tools
+      - name: actionlint
+        run: bin/actionlint
+      # Offline and with no token; .github/zizmor.yml sets the hash-pin
+      # policy for every action (D-09).
+      - name: zizmor
+        run: bin/zizmor --offline --no-progress .
+
+  release-dry-run:
+    name: release dry run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.mod
+      - name: Install the pinned dev tools
+        run: make tools
+      - name: Check that the release runs the GoReleaser of make tools
+        run: |
+          want=v$(sed -n 's/^GORELEASER_VERSION=//p' scripts/install-tools.sh)
+          # The first version: line after the goreleaser-action uses: line.
+          got=$(awk '/uses: goreleaser\/goreleaser-action@/ { f = 1 }
+            f && $1 == "version:" { print $2; exit }' .github/workflows/release.yml)
+          if [ "$want" = v ] || [ "$got" != "$want" ]; then
+            echo "::error::release.yml runs GoReleaser '$got', make tools installs '$want'"
+            exit 1
+          fi
+          echo "release.yml and make tools both pin GoReleaser $want"
+      - name: Check that no release token is set
+        run: |
+          for name in GITHUB_TOKEN GH_TOKEN HOMEBREW_TAP_TOKEN; do
+            if printenv "$name" >/dev/null; then
+              echo "::error::$name is set; the dry run must hold no token"
+              exit 1
+            fi
+          done
+      - name: goreleaser check
+        run: |
+          out=$(bin/goreleaser check 2>&1) || {
+            printf '%s\n' "$out"
+            exit 1
+          }
+          printf '%s\n' "$out"
+          if printf '%s\n' "$out" | grep -qi deprecat; then
+            echo "::error::goreleaser check reports a deprecated property"
+            exit 1
+          fi
+      - name: goreleaser release --snapshot --clean
+        run: bin/goreleaser release --snapshot --clean
+      # scripts/each-target.sh runs the checks once per release target
+      # (D-13): its list must equal the targets the snapshot built.
+      - name: Check that the checks cover each release target
+        run: |
+          built=$(jq -r '.[] | select(.type == "Binary")
+            | "\(.goos)/\(.goarch)"' dist/artifacts.json | LC_ALL=C sort -u)
+          checked=$(sh scripts/each-target.sh --list | LC_ALL=C sort -u)
+          if [ -z "$built" ] || [ -z "$checked" ]; then
+            echo "::error::no target in dist/artifacts.json or scripts/each-target.sh"
+            exit 1
+          fi
+          missing=$(LC_ALL=C comm -23 <(printf '%s\n' "$built") \
+            <(printf '%s\n' "$checked"))
+          extra=$(LC_ALL=C comm -13 <(printf '%s\n' "$built") \
+            <(printf '%s\n' "$checked"))
+          for target in $missing; do
+            echo "::error::the release builds $target, scripts/each-target.sh does not check it"
+          done
+          for target in $extra; do
+            echo "::error::scripts/each-target.sh checks $target, the release does not build it"
+          done
+          if [ -n "$missing$extra" ]; then
+            exit 1
+          fi
+          echo "the release builds and the checks cover: $(echo "$built" | paste -sd ' ' -)"
+      - name: Check the checksums
+        working-directory: dist
+        run: sha256sum --check checksums.txt
+      - name: Check the contents of dist/
+        run: |
+          fail=0
+          # expect <count> <glob>: the glob matches exactly <count> files.
+          expect() {
+            n=$(find dist -maxdepth 1 -type f -name "$2" | wc -l)
+            if [ "$n" -ne "$1" ]; then
+              echo "::error::dist/ holds $n files named $2, want $1"
+              fail=1
+            fi
+          }
+          for target in darwin_amd64 darwin_arm64 linux_amd64 linux_arm64; do
+            expect 1 "wanonymizer_*_$target.tar.gz"
+          done
+          expect 1 'wanonymizer_*_windows_amd64.zip'
+          expect 1 'wanonymizer_*_windows_arm64.zip'
+          expect 1 'wanonymizer_*_linux_amd64.deb'
+          expect 1 'wanonymizer_*_linux_arm64.deb'
+          expect 1 'wanonymizer_*_linux_amd64.rpm'
+          expect 1 'wanonymizer_*_linux_arm64.rpm'
+          # checksums.txt has one line per archive and package.
+          files=$(find dist -maxdepth 1 -type f \( -name '*.tar.gz' \
+            -o -name '*.zip' -o -name '*.deb' -o -name '*.rpm' \) \
+            -exec basename {} \; | sort)
+          listed=$(awk '{ print $2 }' dist/checksums.txt | sort)
+          if [ "$files" != "$listed" ]; then
+            echo "::error::checksums.txt does not list each archive and package once"
+            printf 'files:\n%s\nlisted:\n%s\n' "$files" "$listed"
+            fail=1
+          fi
+          cask=dist/homebrew/Casks/wanonymizer.rb
+          quarantine='"/usr/bin/xattr", args: ["-dr", "com.apple.quarantine"'
+          if ! grep -qF "$quarantine" "$cask"; then
+            echo "::error::$cask has no xattr -dr com.apple.quarantine step"
+            fail=1
+          fi
+          exit "$fail"
+      - name: Check the files of each archive
+        run: |
+          fail=0
+          # check <archive> <listed files> <wanted files>
+          check() {
+            if [ "$2" != "$3" ]; then
+              echo "::error::$1 holds '$2', want '$3'"
+              fail=1
+            fi
+          }
+          for a in dist/*.tar.gz; do
+            check "$a" "$(tar -tzf "$a" | LC_ALL=C sort | tr '\n' ' ')" \
+              'LICENSE README.md wanonymizer '
+          done
+          for a in dist/*.zip; do
+            check "$a" "$(unzip -Z1 "$a" | LC_ALL=C sort | tr '\n' ' ')" \
+              'LICENSE README.md wanonymizer.exe '
+          done
+          exit "$fail"
+      - name: Install the .deb in Debian and run it
+        run: |
+          want="wanonymizer $(jq -r .version dist/metadata.json)"
+          deb=$(basename dist/wanonymizer_*_linux_amd64.deb)
+          got=$(docker run --rm -v "$PWD/dist:/dist:ro" debian:stable-slim \
+            sh -euc 'dpkg -i "/dist/$1" >&2; wanonymizer --version' sh "$deb")
+          echo "$got"
+          if [ "$got" != "$want" ]; then
+            echo "::error::wanonymizer --version printed '$got', want '$want'"
+            exit 1
+          fi
+      # rpm -i refuses the unsigned package on current Fedora; dnf installs
+      # a local file without a signature check.
+      - name: Install the .rpm in Fedora and run it
+        run: |
+          want="wanonymizer $(jq -r .version dist/metadata.json)"
+          rpm=$(basename dist/wanonymizer_*_linux_amd64.rpm)
+          got=$(docker run --rm -v "$PWD/dist:/dist:ro" fedora:latest \
+            sh -euc 'dnf install -y "/dist/$1" >&2; wanonymizer --version' sh "$rpm")
+          echo "$got"
+          if [ "$got" != "$want" ]; then
+            echo "::error::wanonymizer --version printed '$got', want '$want'"
+            exit 1
+          fi

@@ -1,0 +1,17 @@
+# Dependabot (M-001 D-09): weekly updates of the action SHAs and of the
+# Go modules. The pinned dev tools of scripts/install-tools.sh change by
+# hand. The cooldown waits a week before it proposes a new release.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

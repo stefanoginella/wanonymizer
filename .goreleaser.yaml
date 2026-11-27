@@ -1,0 +1,87 @@
+# GoReleaser config: the release path of M-001 (D-02, D-03, D-05, D-06,
+# D-14). Check it with `goreleaser check`; build it locally, without
+# publishing, with `make snapshot`.
+version: 2
+
+project_name: wanonymizer
+
+builds:
+  - id: wanonymizer
+    main: ./cmd/wanonymizer
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -X main.version={{.Version}}
+    # The release targets (D-03): scripts/each-target.sh holds the same
+    # list for the checks of make check and CI, and the release dry run
+    # in CI fails when the two differ.
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Equal inputs give equal binaries: the file time is the commit time.
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: wanonymizer
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+# D-14: a tag with a prerelease suffix (v1.2.0-rc.1) makes a GitHub
+# prerelease, and the cask below skips it.
+release:
+  prerelease: auto
+
+nfpms:
+  - id: wanonymizer
+    formats:
+      - deb
+      - rpm
+    section: utils
+    license: MIT
+    # D-02: the name only, with no email.
+    maintainer: Stefano Ginella
+    homepage: https://github.com/stefanoginella/wanonymizer
+    # One description for the packages and the cask: at most 80
+    # characters, with no full stop (Homebrew's desc rules).
+    description: &description >-
+      Filter that replaces or removes personal data and keys in WordPress
+      SQL dumps
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/wanonymizer/copyright
+
+homebrew_casks:
+  - name: wanonymizer
+    binaries:
+      - wanonymizer
+    homepage: https://github.com/stefanoginella/wanonymizer
+    description: *description
+    skip_upload: auto
+    repository:
+      owner: stefanoginella
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    # D-05: the binaries are unsigned, so the cask removes the quarantine
+    # attribute that macOS sets on the download.
+    hooks:
+      post:
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/wanonymizer"]
+          end
