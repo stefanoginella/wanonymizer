@@ -1,11 +1,15 @@
 #!/bin/sh
-# Installs the pinned dev tools into ./bin/ from their release binaries,
-# each verified against its SHA-256 before it is unpacked.
-# Usage: scripts/install-tools.sh [bin-dir]
+# Installs the pinned dev tools into bin/ at the repository root, from
+# their release binaries, each verified against its SHA-256 before it is
+# unpacked. Each run downloads and replaces every tool.
+# Usage: scripts/install-tools.sh
 set -eu
 
 # Pinned versions: bump by hand, after a check of each releases page.
 GOLANGCI_LINT_VERSION=2.15.0
+# GORELEASER_VERSION is also the goreleaser-action `version:` (with a v)
+# of .github/workflows/release.yml: change both together; the CI release
+# dry run fails when they differ.
 GORELEASER_VERSION=2.20.3
 ACTIONLINT_VERSION=1.7.12
 # zizmor publishes no checksum file: these are the SHA-256 digests that
@@ -17,9 +21,8 @@ ZIZMOR_SHA256_DARWIN_AMD64=8b609d38243c6dd6ddd29bf93d02d886eb507383fe4735b1cde73
 ZIZMOR_SHA256_LINUX_ARM64=aa487c792a7cbbe86e4f8dccd3b66de33b3b51813c090aaa0842d7ea08a3fc35
 ZIZMOR_SHA256_LINUX_AMD64=3e6a301c7a820a2501915f5a9de8c0486da82bdec7965f068477538a98743d43
 
-bin_dir=${1:-bin}
+bin_dir=$(cd "$(dirname "$0")/.." && pwd)/bin
 mkdir -p "$bin_dir"
-bin_dir=$(cd "$bin_dir" && pwd)
 
 case $(uname -s) in
 Darwin) os=darwin ;;
@@ -61,21 +64,14 @@ published_sum() {
 	awk -v n="$2" '$2 == n || $2 == "*" n { print $1 }' "$1"
 }
 
-# installed <tool> <version>: true when bin holds that version already
-installed() {
-	[ -x "$bin_dir/$1" ] && [ "$(cat "$bin_dir/.$1.version" 2>/dev/null)" = "$2" ]
-}
-
 # place <tool> <version> <extracted binary>
 place() {
 	install -m 0755 "$3" "$bin_dir/$1"
-	printf '%s\n' "$2" >"$bin_dir/.$1.version"
 	echo "installed $1 $2"
 }
 
 install_golangci_lint() {
 	v=$GOLANGCI_LINT_VERSION
-	installed golangci-lint "$v" && { echo "golangci-lint $v already installed"; return; }
 	base=https://github.com/golangci/golangci-lint/releases/download/v$v
 	name=golangci-lint-$v-$os-$arch
 	d=$work/golangci-lint
@@ -89,7 +85,6 @@ install_golangci_lint() {
 
 install_goreleaser() {
 	v=$GORELEASER_VERSION
-	installed goreleaser "$v" && { echo "goreleaser $v already installed"; return; }
 	base=https://github.com/goreleaser/goreleaser/releases/download/v$v
 	case $os in darwin) gos=Darwin ;; linux) gos=Linux ;; esac
 	case $arch in arm64) garch=arm64 ;; amd64) garch=x86_64 ;; esac
@@ -105,7 +100,6 @@ install_goreleaser() {
 
 install_actionlint() {
 	v=$ACTIONLINT_VERSION
-	installed actionlint "$v" && { echo "actionlint $v already installed"; return; }
 	base=https://github.com/rhysd/actionlint/releases/download/v$v
 	name=actionlint_${v}_${os}_$arch.tar.gz
 	d=$work/actionlint
@@ -119,7 +113,6 @@ install_actionlint() {
 
 install_zizmor() {
 	v=$ZIZMOR_VERSION
-	installed zizmor "$v" && { echo "zizmor $v already installed"; return; }
 	base=https://github.com/zizmorcore/zizmor/releases/download/v$v
 	case $arch in arm64) zarch=aarch64 ;; amd64) zarch=x86_64 ;; esac
 	case $os in darwin) ztarget=apple-darwin ;; linux) ztarget=unknown-linux-gnu ;; esac

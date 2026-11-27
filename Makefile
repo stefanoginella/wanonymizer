@@ -46,7 +46,7 @@ deps:
 	@sh scripts/check-deps.sh
 
 tools:
-	@sh scripts/install-tools.sh bin
+	@sh scripts/install-tools.sh
 
 # snapshot builds the release locally into dist/ and publishes nothing.
 snapshot:
