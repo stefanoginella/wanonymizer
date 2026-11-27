@@ -14,7 +14,3 @@
 ## Deferred
 
 - Decide again on a real import into WordPress with WooCommerce in CI (due M-005)
-
-## Manual actions
-
-- M-001: Add a fine-grained token with contents read-write on `stefanoginella/homebrew-tap` only, as the `HOMEBREW_TAP_TOKEN` Actions secret of `stefanoginella/wanonymizer`.
